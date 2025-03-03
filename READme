@@ -1,0 +1,6 @@
+AI-Based To-Do List – Implement AI-powered task suggestions based on past activities
+Tech Stack:
+Frontend: React (Vite, Tailwind)
+Backend: Flask (Python)
+Database: SQLite (for storing tasks)
+Machine Learning: TF-IDF + Cosine Similarity (Scikit-Learn)
