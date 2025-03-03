@@ -1,0 +1,92 @@
+import { useState, useEffect } from "react";
+import axios from "axios";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
+export default function App() {
+  const [tasks, setTasks] = useState([]);
+  const [task, setTask] = useState("");
+  const [suggestion, setSuggestion] = useState("");
+
+  // Fetch tasks
+  useEffect(() => {
+    fetchTasks();
+  }, []);
+
+  const fetchTasks = async () => {
+    try {
+      const res = await axios.get("http://127.0.0.1:5000/get_tasks");
+      setTasks(res.data);
+    } catch (error) {
+      console.error("Error fetching tasks", error);
+    }
+  };
+
+  // Add new task
+  const addTask = async () => {
+    if (!task.trim()) return;
+    try {
+      await axios.post("http://127.0.0.1:5000/add_task", { task });
+      toast.success("Task added!");
+      setTask("");
+      fetchTasks();
+    } catch (error) {
+      toast.error("Error adding task");
+    }
+  };
+
+  // Get AI-based suggestion
+  const getSuggestion = async () => {
+    try {
+      const res = await axios.get("http://127.0.0.1:5000/suggest_tasks");
+      setSuggestion(res.data.suggestion);
+    } catch (error) {
+      toast.error("Error fetching suggestion");
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col items-center p-5 bg-gray-100">
+      <ToastContainer />
+      <h1 className="text-3xl font-bold mb-4">AI To-Do List</h1>
+
+      <div className="w-full max-w-md bg-white p-4 rounded shadow">
+        <input
+          type="text"
+          placeholder="Enter a task..."
+          className="w-full p-2 border rounded mb-2"
+          value={task}
+          onChange={(e) => setTask(e.target.value)}
+        />
+        <button
+          onClick={addTask}
+          className="w-full bg-blue-500 text-white p-2 rounded"
+        >
+          Add Task
+        </button>
+      </div>
+
+      <div className="mt-5 w-full max-w-md">
+        <h2 className="text-xl font-semibold mb-3">Your Tasks</h2>
+        {tasks.map((t) => (
+          <div key={t.id} className="p-2 bg-white border rounded mb-2">
+            {t.task}
+          </div>
+        ))}
+      </div>
+
+      <button
+        onClick={getSuggestion}
+        className="mt-4 bg-green-500 text-white px-4 py-2 rounded"
+      >
+        Get AI Suggestion
+      </button>
+
+      {suggestion && (
+        <p className="mt-3 text-lg font-medium text-gray-700">
+          Suggested Task: <span className="text-green-600">{suggestion}</span>
+        </p>
+      )}
+    </div>
+  );
+}
