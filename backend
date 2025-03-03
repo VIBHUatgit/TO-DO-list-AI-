@@ -1,0 +1,73 @@
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+import sqlite3
+import numpy as np
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+
+app = Flask(__name__)
+CORS(app)
+
+# Database setup
+def init_db():
+    conn = sqlite3.connect('tasks.db')
+    cursor = conn.cursor()
+    cursor.execute('''CREATE TABLE IF NOT EXISTS tasks 
+                      (id INTEGER PRIMARY KEY AUTOINCREMENT, task TEXT)''')
+    conn.commit()
+    conn.close()
+
+init_db()
+
+# Add a new task
+@app.route('/add_task', methods=['POST'])
+def add_task():
+    data = request.json
+    task = data.get('task')
+    
+    conn = sqlite3.connect('tasks.db')
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO tasks (task) VALUES (?)", (task,))
+    conn.commit()
+    conn.close()
+    
+    return jsonify({'message': 'Task added successfully'}), 201
+
+# Get all tasks
+@app.route('/get_tasks', methods=['GET'])
+def get_tasks():
+    conn = sqlite3.connect('tasks.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM tasks")
+    tasks = [{'id': row[0], 'task': row[1]} for row in cursor.fetchall()]
+    conn.close()
+    return jsonify(tasks)
+
+# Get AI-based task suggestions
+@app.route('/suggest_tasks', methods=['GET'])
+def suggest_tasks():
+    conn = sqlite3.connect('tasks.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT task FROM tasks")
+    tasks = [row[0] for row in cursor.fetchall()]
+    conn.close()
+
+    if len(tasks) < 2:
+        return jsonify({'suggestion': "Not enough tasks to generate suggestions."})
+
+    # AI-powered task suggestion using TF-IDF
+    vectorizer = TfidfVectorizer()
+    tfidf_matrix = vectorizer.fit_transform(tasks)
+    similarity_matrix = cosine_similarity(tfidf_matrix)
+
+    last_task_index = len(tasks) - 1
+    similarities = similarity_matrix[last_task_index]
+    
+    # Get most similar task (excluding itself)
+    most_similar_index = np.argmax(similarities[:-1])
+    suggested_task = tasks[most_similar_index]
+
+    return jsonify({'suggestion': suggested_task})
+
+if __name__ == '__main__':
+    app.run(debug=True)
